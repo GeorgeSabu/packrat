@@ -1,11 +1,12 @@
 # Given a package record, indicate the name we expect its source archive to have.
 pkgSrcFilename <- function(pkgRecord) {
-  if (identical(pkgRecord$source, "github"))
+  if (identical(pkgRecord$source, "github")) {
     paste(pkgRecord$gh_sha1, ".tar.gz", sep = "")
-  else if (pkgRecord$source %in% c("bitbucket", "gitlab"))
+  } else if (pkgRecord$source %in% c("bitbucket", "gitlab")) {
     paste(pkgRecord$remote_sha, ".tar.gz", sep = "")
-  else
+  } else {
     paste(pkgRecord$name, "_", pkgRecord$version, ".tar.gz", sep = "")
+  }
 }
 
 # Given a package record and a set of known repositories, indicate whether the
@@ -88,6 +89,7 @@ getSourceForPkgRecord <- function(pkgRecord,
 
   # If the file we want to download already exists, skip it
   pkgSrcFile <- pkgSrcFilename(pkgRecord)
+  
   if (file.exists(file.path(pkgSrcDir, pkgSrcFile)))
     return(NULL)
 
@@ -99,7 +101,7 @@ getSourceForPkgRecord <- function(pkgRecord,
   type <- pkgRecord$source
   if (identical(type, "CustomCRANLikeRepository"))
     type <- "CRAN"
-
+  
   # If this is a local source path, compress the local sources rather than
   # trying to download from an external source
   if (identical(pkgRecord$source, "source")) {
@@ -292,18 +294,22 @@ getSourceForPkgRecord <- function(pkgRecord,
       # headers"); hide those
       suppressWarnings(untar(srczip, exdir = scratchDir, tar = "internal"))
       # Find the base directory
-      basedir <- if (length(dir(scratchDir)) == 1)
+      basedir <- if (length(dir(scratchDir)) == 1) {
         file.path(scratchDir, dir(scratchDir))
-      else
+      } else {
         scratchDir
+      }
 
-      if (!is.null(pkgRecord$gh_subdir))
+      if (identical(pkgRecord$gh_subdir, character(0))) {
+        pkgRecord$gh_subdir <- NULL
+      }
+      if (!is.null(pkgRecord$gh_subdir)) {
         basedir <- file.path(basedir, pkgRecord$gh_subdir)
-
+      }
+            
       if (!file.exists(file.path(basedir, 'DESCRIPTION'))) {
         stop('No DESCRIPTION file was found in the archive for ', pkgRecord$name)
       }
-
       ghinfo <- as.data.frame(c(list(
         GithubRepo = pkgRecord$gh_repo,
         GithubUsername = pkgRecord$gh_username,
@@ -312,17 +318,15 @@ getSourceForPkgRecord <- function(pkgRecord,
         c(GithubSubdir = pkgRecord$gh_subdir)
       )
       appendToDcf(file.path(basedir, 'DESCRIPTION'), ghinfo)
-
       file.create(file.path(pkgSrcDir, pkgSrcFile))
       dest <- normalizePath(file.path(pkgSrcDir, pkgSrcFile), winslash = '/')
-
       # R's internal tar (which we use here for cross-platform consistency)
       # emits warnings when there are > 100 characters in the path, due to the
       # resulting incompatibility with older implementations of tar. This isn't
       # relevant for our purposes, so suppress the warning.
       in_dir(dirname(basedir),
              suppressWarnings(tar(tarfile = dest, files = basename(basedir),
-                                  compression = 'gzip', tar = 'internal'))
+                                  compression = 'gzip', tar = 'internal'))                           
       )
     })
 

@@ -72,18 +72,40 @@ getPackageRecordsLocalRepos <- function(pkgNames, repos, fatal = TRUE) {
 
 getPackageRecordsLocalReposImpl <- function(pkg, repos, fatal = TRUE) {
   repoToUse <- findLocalRepoForPkg(pkg, repos, fatal = fatal)
+  targzed <- FALSE
+  if (identical(repoToUse, NULL)) {
+    repoToUse <- findLocalRepoForPkg(paste0(pkg, '_.*\\.tar.gz'), repos, fatal = fatal)
+    targzed <- TRUE
+  }
   if (!length(repoToUse))
     return(NULL)
-  path <- file.path(repoToUse, pkg)
-  dcf <- as.data.frame(readDcf(file.path(path, "DESCRIPTION")), stringsAsFactors = FALSE)
-  deps <- combineDcfFields(dcf, c("Depends", "Imports", "LinkingTo"))
-  deps <- deps[deps != "R"]
+  
+  if (!targzed) {
+    path <- file.path(repoToUse, pkg)
+    dcf <- as.data.frame(readDcf(file.path(path, "DESCRIPTION")), stringsAsFactors = FALSE)
+    deps <- combineDcfFields(dcf, c("Depends", "Imports", "LinkingTo"))
+    deps <- deps[deps != "R"]
+    packageHash <- hash(file.path(repoToUse, pkg, "DESCRIPTION"))
+    srcPath <- file.path(repoToUse, pkg)
+  } else {
+    hashTarball <- function(path) {
+      # TODO: unpack, recursively hash, and combine? for now
+      # we just hash the tarball as-is
+      tools::md5sum(files = normalizePath(path, mustWork = TRUE))
+    }
+    filePath <- file.path(repoToUse, list.files(path = repoToUse, pattern=paste0(pkg, '_.*\\.tar.gz'), recursive=FALSE)[1])
+    packageName <- list.files(path = repoToUse, pattern=paste0(pkg, '_.*\\.tar.gz'), recursive=FALSE)[1]
+    dcf <- NULL
+    packageHash <- as.vector(hashTarball(filePath))
+    srcPath <- filePath
+    dcf$Version <- strsplit(tail(strsplit(packageName, paste0(pkg, "_"))[[1]], n = 1), ".tar.gz")[[1]]
+  }
   structure(list(
     name = pkg,
     source = 'source',
     version = dcf$Version,
-    source_path = file.path(repoToUse, pkg),
-    hash = hash(file.path(repoToUse, pkg, "DESCRIPTION"))
+    source_path = srcPath,
+    hash = packageHash
   ), class = c('packageRecord', 'source'))
 }
 
@@ -253,10 +275,8 @@ getPackageRecords <- function(pkgNames,
     externalPkgRecords,
     fallbackPkgRecords
   )
-
   # Remove any null records
   allRecords <- dropNull(allRecords)
-
   # Now get recursive package dependencies if necessary
   if (recursive) {
     allRecords <- lapply(allRecords, function(record) {
@@ -279,7 +299,6 @@ getPackageRecords <- function(pkgNames,
       record
     })
   }
-
   allRecords
 }
 

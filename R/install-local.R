@@ -31,16 +31,16 @@ findLocalRepoForPkg <- function(pkg,
   if (!length(repos) || identical(repos, "")) return(character())
   # Search through the local repositories for a suitable package
   hasPackage <- unlist(lapply(repos, function(repo) {
-    file.exists(file.path(repo, pkg))
+    if (grepl("*.tar.gz", pkg)) {
+      file.exists(file.path(repo, list.files(path = repo, pattern=pkg, recursive=FALSE)[1]))
+    } else {
+      file.exists(file.path(repo, pkg))
+    }
   }))
   names(hasPackage) <- repos
   numFound <- sum(hasPackage)
   if (numFound == 0) {
-    if (fatal) {
-      stop("No package '", pkg, "' found in local repositories specified")
-    } else {
-      return(NULL)
-    }
+    return(NULL)
   }
 
   if (numFound > 1)
@@ -62,6 +62,18 @@ install_local_single <- function(pkg,
          "Use 'packrat::set_opts(local.repos = ...)' to add local repositories.",
          call. = FALSE)
   repoToUse <- findLocalRepoForPkg(pkg, repos, fatal = fatal)
+  
+  if (identical(repoToUse, NULL)) {
+    repoToUse <- findLocalRepoForPkg(paste0(pkg, '_.*\\.tar.gz'), repos, fatal = fatal)
+    if (!identical(repoToUse, NULL)) {
+      pkg <- list.files(path = repoToUse, pattern=paste0(pkg, '_.*\\.tar.gz'), recursive=FALSE)[1]
+    }
+  }
+
+  if (identical(repoToUse, NULL)) {
+    stop("No package '", pkg, "' found in local repositories specified")
+  }
+
   path <- file.path(repoToUse, pkg)
   with_libpaths(lib, install_local_path(path = path, ...))
 
