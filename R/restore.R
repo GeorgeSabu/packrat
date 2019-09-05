@@ -805,16 +805,11 @@ installPkg <- function(pkgRecord,
   return(type)
 }
 
-playActions <- function(pkgRecords, actions, repos, project, lib) {
-
-  installedPkgs <- installed.packages(priority = c("NA", "recommended"))
-  targetPkgs <- searchPackages(pkgRecords, names(actions))
-
-  for (i in seq_along(actions)) {
-    action <- as.character(actions[i])
-    pkgRecord <- targetPkgs[i][[1]]
+installOneByOne <- function(actions, targetPkgs, installedPkgs, index, lib,  project, repos) {
+    action <- as.character(actions[index])
+    pkgRecord <- targetPkgs[index][[1]]
     if (is.null(pkgRecord) && !identical(action, "remove")) {
-      warning("Can't ", action, " ", names(actions[i]),
+      warning("Can't ", action, " ", names(actions[index]),
               ": missing from lockfile")
       next
     }
@@ -831,8 +826,8 @@ playActions <- function(pkgRecords, actions, repos, project, lib) {
               appendLF = TRUE)
     } else if (identical(action, "remove")) {
       if (is.null(pkgRecord)) {
-        message("Removing ", names(actions[i]), " ... ", appendLF = FALSE)
-        removePkgs(project, names(actions[i]), lib)
+        message("Removing ", names(actions[index]), " ... ", appendLF = FALSE)
+        removePkgs(project, names(actions[index]), lib)
       } else {
         message("Removing ", pkgRecord$name, "( ", pkgRecord$version, ") ... ",
                 appendLF = FALSE)
@@ -843,6 +838,15 @@ playActions <- function(pkgRecords, actions, repos, project, lib) {
     }
     type <- installPkg(pkgRecord, project, repos, lib)
     message("\tOK (", type, ")")
+}
+
+playActions <- function(pkgRecords, actions, repos, project, lib1) {
+
+  installedPkgs <- installed.packages(priority = c("NA", "recommended"))
+  targetPkgs <- searchPackages(pkgRecords, names(actions))
+
+  for (i in seq_along(actions)) {
+    installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
   }
   invisible()
 }
