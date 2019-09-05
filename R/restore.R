@@ -844,9 +844,38 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
 
   installedPkgs <- installed.packages(priority = c("NA", "recommended"))
   targetPkgs <- searchPackages(pkgRecords, names(actions))
+  action_seq <- seq_along(actions)
+  numberCores <- 3
+  start <- 1
+  mix <- 0
 
-  for (i in seq_along(actions)) {
-    installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
+  if ( numberCores < 1 ) {
+    numberCores <- 1
+  }
+
+  if (numberCores >= length(action_seq)) {
+    numberCores <- length(action_seq)
+  }
+
+  for (val in c(1:floor(length(action_seq) / numberCores))) {
+    mix <- val*numberCores
+    prom <- c()
+    for (i in action_seq[start: mix]) {
+        prommi <- future::future({
+          installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
+        })
+        prom <- append(prom, c(prommi))
+    }
+    future::resolve(prom)
+    start <- mix + 1
+  }
+  
+  if (start <= length(action_seq)) {
+    for (i in action_seq[start: length(action_seq)]) {
+      prommi <- future::future({
+        installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
+      })
+    }
   }
   invisible()
 }
