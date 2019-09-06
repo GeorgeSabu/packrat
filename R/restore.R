@@ -849,6 +849,7 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
   numberCores <- 3
   start <- 1
   mix <- 0
+  future::plan(multiprocess)
 
   if ( numberCores < 1 ) {
     numberCores <- 1
@@ -857,7 +858,6 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
   if (numberCores >= length(action_seq)) {
     numberCores <- length(action_seq)
   }
-
   for (val in c(1:floor(length(action_seq) / numberCores))) {
     mix <- val*numberCores
     prom <- c()
