@@ -836,6 +836,7 @@ installOneByOne <- function(actions, targetPkgs, installedPkgs, index, lib,  pro
       message("OK")
       next
     }
+    print(lib)
     type <- installPkg(pkgRecord, project, repos, lib)
     message("\tOK (", type, ")")
 }
@@ -861,6 +862,7 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
     mix <- val*numberCores
     prom <- c()
     for (i in action_seq[start: mix]) {
+        print(i)
         prommi <- future::future({
           installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
         })
@@ -872,6 +874,7 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
   
   if (start <= length(action_seq)) {
     for (i in action_seq[start: length(action_seq)]) {
+      print(i)
       prommi <- future::future({
         installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
       })
