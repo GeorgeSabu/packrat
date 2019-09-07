@@ -836,7 +836,6 @@ installOneByOne <- function(actions, targetPkgs, installedPkgs, index, lib,  pro
       message("OK")
       next
     }
-    print(lib)
     type <- installPkg(pkgRecord, project, repos, lib)
     message("\tOK (", type, ")")
 }
@@ -846,7 +845,7 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
   installedPkgs <- installed.packages(priority = c("NA", "recommended"))
   targetPkgs <- searchPackages(pkgRecords, names(actions))
   action_seq <- seq_along(actions)
-  numberCores <- 3
+  numberCores <- getOption('noOfParallelInstall', default = 2)
   start <- 1
   mix <- 0
   future::plan(future::multiprocess)
@@ -862,7 +861,6 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
     mix <- val*numberCores
     prom <- c()
     for (i in action_seq[start: mix]) {
-        print(i)
         prommi <- future::future({
           installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
         })
@@ -874,7 +872,6 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
   
   if (start <= length(action_seq)) {
     for (i in action_seq[start: length(action_seq)]) {
-      print(i)
       prommi <- future::future({
         installOneByOne(actions, targetPkgs, installedPkgs, i, lib1,  project, repos)
       })
