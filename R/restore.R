@@ -849,7 +849,7 @@ playActions <- function(pkgRecords, actions, repos, project, lib1) {
   numberCores <- 3
   start <- 1
   mix <- 0
-  future::plan(multiprocess)
+  future::plan(future::multiprocess)
 
   if ( numberCores < 1 ) {
     numberCores <- 1
